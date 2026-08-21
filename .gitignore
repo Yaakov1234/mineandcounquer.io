@@ -1,0 +1,37 @@
+# Build artifacts
+build/
+dist/
+bin/
+obj/
+
+# Dependencies
+node_modules/
+/frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CMake
+CMakeLists.txt.user
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+.AppleDouble
+.LSOverride
