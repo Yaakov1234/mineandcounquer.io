@@ -14,7 +14,9 @@ find_package(websocketpp QUIET)
 # Source files
 set(BACKEND_SOURCES
     src/main.cpp
+    src/ServerApplication.cpp
     src/GameServer.cpp
+    src/GameServerWithNetwork.cpp
     src/World.cpp
     src/Player.cpp
     src/NetworkManager.cpp
@@ -50,3 +52,8 @@ endif()
 set_target_properties(mineandconquer_server PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
+
+# Enable optimization for release builds
+if(CMAKE_BUILD_TYPE MATCHES Release)
+    target_compile_options(mineandconquer_server PRIVATE -O3)
+endif()
