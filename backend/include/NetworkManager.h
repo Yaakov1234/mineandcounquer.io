@@ -4,7 +4,9 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <mutex>
 #include <queue>
+#include <unordered_map>
 #include <nlohmann/json.hpp>
 #include "common/Types.h"
 
@@ -65,6 +67,7 @@ public:
     void onPlayerConnected(PlayerID playerId);
     void onPlayerDisconnected(PlayerID playerId);
     bool isPlayerConnected(PlayerID playerId) const;
+    void setPlayerWorld(PlayerID playerId, WorldID worldId);
     
     // JSON serialization helpers
     static json serializePlayer(const PlayerState& player);
@@ -73,13 +76,19 @@ public:
     static json serializeInventory(const Inventory& inv);
 
 private:
+    struct Impl;
+    void enqueue(Message message);
+    void sendJson(PlayerID playerId, const json& message);
+
     uint16_t port_;
     bool running_ = false;
     std::queue<Message> incomingMessages_;
-    std::vector<PlayerID> connectedPlayers_;
+    std::unique_ptr<Impl> impl_;
+    mutable std::mutex mutex_;
     float messageBufferTime_ = 0.0f;
     float messageFlushInterval_ = 0.016f;  // ~60 Hz
     
     // WebSocket implementation will go here
     // For now, this is a placeholder for the message queue system
 };
+
