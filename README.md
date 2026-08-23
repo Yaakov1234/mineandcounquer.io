@@ -61,7 +61,7 @@ After joining, the server assigns the player ID itself and returns `joined`. It 
 ### Requirements
 
 - CMake 3.24 or later
-- A C++20 compiler
+- A C++17 compiler
 - Boost.System development headers
 
 CMake downloads GLM, nlohmann/json, and websocketpp during configuration.
