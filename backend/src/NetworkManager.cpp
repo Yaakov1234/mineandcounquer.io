@@ -192,12 +192,12 @@ void NetworkManager::onPlayerDisconnected(PlayerID playerId) {
 
 bool NetworkManager::isPlayerConnected(PlayerID playerId) const {
     std::lock_guard lock(impl_->connectionsMutex);
-    return impl_->connectionByPlayer.contains(playerId);
+    return impl_->connectionByPlayer.find(playerId) != impl_->connectionByPlayer.end();
 }
 
 void NetworkManager::setPlayerWorld(PlayerID playerId, WorldID worldId) {
     std::lock_guard lock(impl_->connectionsMutex);
-    if (impl_->connectionByPlayer.contains(playerId)) impl_->worldByPlayer[playerId] = worldId;
+    if (impl_->connectionByPlayer.find(playerId) != impl_->connectionByPlayer.end()) impl_->worldByPlayer[playerId] = worldId;
 }
 
 void NetworkManager::enqueue(Message message) {
