@@ -45,7 +45,7 @@ void World::update(float deltaTime) {
 }
 
 PlayerID World::addPlayer(PlayerID id, const std::string& username) {
-    if (id == 0 || playerMap_.contains(id) || players_.size() >= MAX_PLAYERS_PER_WORLD) return 0;
+    if (id == 0 || playerMap_.find(id) != playerMap_.end() || players_.size() >= MAX_PLAYERS_PER_WORLD) return 0;
 
     glm::vec3 spawnPos = getRandomMineSpawn();
     auto player = std::make_unique<Player>(id, username, spawnPos);
@@ -76,6 +76,11 @@ Player* World::getPlayer(PlayerID id) {
         return it->second.get();
     }
     return nullptr;
+}
+
+const Player* World::getPlayer(PlayerID id) const {
+    const auto it = playerMap_.find(id);
+    return it != playerMap_.end() ? it->second.get() : nullptr;
 }
 
 StructureID World::addStructure(PlayerID ownerId, const glm::vec3& pos, StructureType type) {
@@ -192,7 +197,7 @@ std::vector<ResourceID> World::getNearbyResources(const glm::vec3& pos, float ra
 }
 
 bool World::canExitMine(PlayerID playerId) const {
-    Player* player = const_cast<Player*>(const_cast<const World*>(this)->getPlayer(playerId));
+    const Player* player = getPlayer(playerId);
     if (!player) return false;
     
     // Need at least some resources to exit mine
