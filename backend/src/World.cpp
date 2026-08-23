@@ -10,7 +10,8 @@ World::World(WorldID id)
       physics_(std::make_unique<Physics>()),
       miningSystem_(std::make_unique<MiningSystem>()),
       buildingSystem_(std::make_unique<BuildingSystem>()),
-      combatSystem_(std::make_unique<CombatSystem>()) {
+      combatSystem_(std::make_unique<CombatSystem>()),
+      economySystem_(std::make_unique<EconomySystem>()) {
     std::cout << "World " << id << " initialized" << std::endl;
     spawnResources();  // Initial resource spawn
 }
@@ -43,9 +44,8 @@ void World::update(float deltaTime) {
     cleanupDeadPlayers();
 }
 
-PlayerID World::addPlayer(const std::string& username) {
-    static PlayerID nextId = 1;
-    PlayerID id = nextId++;
+PlayerID World::addPlayer(PlayerID id, const std::string& username) {
+    if (id == 0 || playerMap_.contains(id) || players_.size() >= MAX_PLAYERS_PER_WORLD) return 0;
 
     glm::vec3 spawnPos = getRandomMineSpawn();
     auto player = std::make_unique<Player>(id, username, spawnPos);
@@ -79,10 +79,23 @@ Player* World::getPlayer(PlayerID id) {
 }
 
 StructureID World::addStructure(PlayerID ownerId, const glm::vec3& pos, StructureType type) {
-    if (!buildingSystem_->canPlaceStructure(pos, type)) {
+    Player* owner = getPlayer(ownerId);
+    if (!owner || !owner->isAlive() || owner->isInMine() ||
+        glm::distance(owner->getPosition(), pos) > 12.0f ||
+        glm::distance(pos, surfaceCenter_) > surfaceRadius_ ||
+        !buildingSystem_->canPlaceStructure(pos, type) ||
+        buildingSystem_->checkPlacementCollision(pos, buildingSystem_->getStructureRadius(type), structures_)) {
         std::cout << "Cannot place structure at position" << std::endl;
         return 0;
     }
+
+    const uint32_t gemCost = buildingSystem_->getGemCost(type);
+    const uint32_t rockCost = buildingSystem_->getRockCost(type);
+    const Inventory& inventory = owner->getInventory();
+    if (inventory.gems < gemCost || inventory.rocks < rockCost) return 0;
+
+    owner->removeResource(ResourceType::GEM, gemCost);
+    owner->removeResource(ResourceType::ROCK, rockCost);
 
     StructureID id = nextStructureId_++;
     auto structure = std::make_unique<Structure>();
@@ -188,10 +201,11 @@ bool World::canExitMine(PlayerID playerId) const {
 
 void World::movePlayerToSurface(PlayerID playerId) {
     Player* player = getPlayer(playerId);
-    if (player) {
+    if (player && canExitMine(playerId)) {
         player->enterZone(ZoneType::SURFACE);
         glm::vec3 spawnPos = getRandomSurfaceSpawn();
         player->setPosition(spawnPos);
+        player->setVelocity(glm::vec3(0.0f));
         std::cout << "Player " << playerId << " moved to surface" << std::endl;
     }
 }
@@ -202,6 +216,7 @@ void World::movePlayerToMine(PlayerID playerId) {
         player->enterZone(ZoneType::MINE);
         glm::vec3 spawnPos = getRandomMineSpawn();
         player->setPosition(spawnPos);
+        player->setVelocity(glm::vec3(0.0f));
         std::cout << "Player " << playerId << " moved to mine" << std::endl;
     }
 }
@@ -232,7 +247,7 @@ bool World::fireWeapon(PlayerID shooterId, const glm::vec3& targetPos, WeaponTyp
                 if (target->hasArmor()) {
                     damage = combatSystem_->calculateArmorReduction(damage, true);
                 }
-                damagePlayer(target->getId(), damage);
+                damagePlayer(target->getId(), damage, shooterId);
                 return true;
             }
         }
@@ -250,11 +265,30 @@ bool World::fireWeapon(PlayerID shooterId, const glm::vec3& targetPos, WeaponTyp
     return false;
 }
 
-void World::damagePlayer(PlayerID targetId, float damage) {
+bool World::buyWeapon(PlayerID playerId, WeaponType weapon) {
+    Player* player = getPlayer(playerId);
+    if (!player || !player->isAlive() || player->isInMine() ||
+        !economySystem_->canAffordWeapon(player->getInventory(), weapon)) {
+        return false;
+    }
+    const uint32_t cost = economySystem_->getWeaponPrice(weapon);
+    if (!player->removeResource(ResourceType::GEM, cost)) return false;
+    player->addWeapon(weapon);
+    return true;
+}
+
+float World::getWeaponFireRate(WeaponType weapon) const {
+    return combatSystem_->getWeaponFireRate(weapon);
+}
+
+void World::damagePlayer(PlayerID targetId, float damage, PlayerID attackerId) {
     Player* target = getPlayer(targetId);
     if (target && target->isAlive()) {
         target->applyDamage(damage);
         std::cout << "Player " << targetId << " took " << damage << " damage" << std::endl;
+        if (!target->isAlive() && attackerId != 0 && attackerId != targetId) {
+            killPlayer(targetId, attackerId);
+        }
     }
 }
 
@@ -352,11 +386,13 @@ void World::updateStructures(float deltaTime) {
         
         // Update building progress
         if (structure->buildProgress < 1.0f) {
-            structure->buildTimeRemaining -= static_cast<uint64_t>(deltaTime * 1000);
-            if (structure->buildTimeRemaining <= 0) {
+            const uint64_t elapsed = static_cast<uint64_t>(std::max(0.0f, deltaTime) * 1000);
+            if (elapsed >= structure->buildTimeRemaining) {
+                structure->buildTimeRemaining = 0;
                 structure->buildProgress = 1.0f;
                 std::cout << "Structure " << structure->id << " completed" << std::endl;
             } else {
+                structure->buildTimeRemaining -= elapsed;
                 structure->buildProgress = 1.0f - (static_cast<float>(structure->buildTimeRemaining) / 
                     buildingSystem_->getBuildTimeMs(structure->type));
             }
@@ -368,13 +404,14 @@ void World::respawnResources(float deltaTime) {
     resourceSpawnTimer_ += deltaTime;
     if (resourceSpawnTimer_ >= resourceSpawnInterval_) {
         // Remove old collected resources and respawn
+        const size_t previousCount = resources_.size();
         resources_.erase(
             std::remove_if(resources_.begin(), resources_.end(),
                 [](const std::unique_ptr<Resource>& r) { return r->collected; }),
             resources_.end()
         );
         
-        spawnResources();
+        if (resources_.size() < previousCount) spawnResources();
         resourceSpawnTimer_ = 0.0f;
     }
 }
@@ -383,9 +420,12 @@ void World::cleanupDeadPlayers() {
     for (auto* player : players_) {
         if (player && !player->isAlive()) {
             // Respawn player in mine
+            player->enterZone(ZoneType::MINE);
             player->setPosition(getRandomMineSpawn());
+            player->setVelocity(glm::vec3(0.0f));
             // Reset health
             player->heal(player->getMaxHealth());
         }
     }
 }
+
