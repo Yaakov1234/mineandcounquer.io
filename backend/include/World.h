@@ -26,6 +26,7 @@ public:
     PlayerID addPlayer(PlayerID id, const std::string& username);
     void removePlayer(PlayerID id);
     Player* getPlayer(PlayerID id);
+    const Player* getPlayer(PlayerID id) const;
     const std::vector<Player*>& getAllPlayers() const { return players_; }
     size_t getPlayerCount() const { return players_.size(); }
 
