@@ -12,6 +12,7 @@
 #include "MiningSystem.h"
 #include "BuildingSystem.h"
 #include "CombatSystem.h"
+#include "EconomySystem.h"
 
 class World {
 public:
@@ -22,7 +23,7 @@ public:
     void update(float deltaTime);
 
     // Player management
-    PlayerID addPlayer(const std::string& username);
+    PlayerID addPlayer(PlayerID id, const std::string& username);
     void removePlayer(PlayerID id);
     Player* getPlayer(PlayerID id);
     const std::vector<Player*>& getAllPlayers() const { return players_; }
@@ -50,7 +51,9 @@ public:
 
     // Combat actions
     bool fireWeapon(PlayerID shooterId, const glm::vec3& targetPos, WeaponType weapon);
-    void damagePlayer(PlayerID targetId, float damage);
+    bool buyWeapon(PlayerID playerId, WeaponType weapon);
+    float getWeaponFireRate(WeaponType weapon) const;
+    void damagePlayer(PlayerID targetId, float damage, PlayerID attackerId = 0);
     void damageStructure(StructureID structureId, float damage);
     void killPlayer(PlayerID playerId, PlayerID killerId);
 
@@ -83,6 +86,7 @@ private:
     std::unique_ptr<MiningSystem> miningSystem_;
     std::unique_ptr<BuildingSystem> buildingSystem_;
     std::unique_ptr<CombatSystem> combatSystem_;
+    std::unique_ptr<EconomySystem> economySystem_;
 
     // World parameters
     glm::vec3 mineCenter_ = glm::vec3(0, -50, 0);
@@ -102,3 +106,4 @@ private:
     static constexpr size_t MAX_PLAYERS_PER_WORLD = 100;
     static constexpr float WORLD_UPDATE_INTERVAL = 1.0f / 60.0f;  // 60 Hz
 };
+
