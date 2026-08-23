@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <thread>
@@ -162,7 +163,7 @@ bool GameServer::readVec3(const json& value, glm::vec3& result) {
     if (!value.is_object() || !value.contains("x") || !value.contains("y") || !value.contains("z")) return false;
     try {
         result = {value.at("x").get<float>(), value.at("y").get<float>(), value.at("z").get<float>()};
-        return glm::all(glm::isfinite(result));
+        return std::isfinite(result.x) && std::isfinite(result.y) && std::isfinite(result.z);
     } catch (const json::exception&) {
         return false;
     }
@@ -173,7 +174,7 @@ WeaponType GameServer::weaponFromJson(const json& value, bool& valid) {
         {"pistol", WeaponType::PISTOL}, {"rifle", WeaponType::RIFLE}, {"shotgun", WeaponType::SHOTGUN},
         {"sniper", WeaponType::SNIPER}, {"rocket", WeaponType::ROCKET_LAUNCHER}
     };
-    valid = value.is_string() && weapons.contains(value.get<std::string>());
+    valid = value.is_string() && weapons.find(value.get<std::string>()) != weapons.end();
     return valid ? weapons.at(value.get<std::string>()) : WeaponType::PISTOL;
 }
 
@@ -182,7 +183,7 @@ StructureType GameServer::structureFromJson(const json& value, bool& valid) {
         {"wall", StructureType::WALL}, {"tower", StructureType::TOWER}, {"base", StructureType::BASE},
         {"storage", StructureType::STORAGE}, {"turret", StructureType::TURRET}
     };
-    valid = value.is_string() && structures.contains(value.get<std::string>());
+    valid = value.is_string() && structures.find(value.get<std::string>()) != structures.end();
     return valid ? structures.at(value.get<std::string>()) : StructureType::WALL;
 }
 
