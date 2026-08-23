@@ -28,10 +28,11 @@ public:
     uint32_t getResourceValue(const Resource& resource) const;
 
 private:
-    std::mt19937 rng_;
+    mutable std::mt19937 rng_;
     uint32_t rockValue_ = 1;
     uint32_t gemMinRarity_ = 1;
     uint32_t gemMaxRarity_ = 5;
     uint32_t rockMinAmount_ = 1;
     uint32_t rockMaxAmount_ = 10;
 };
+
