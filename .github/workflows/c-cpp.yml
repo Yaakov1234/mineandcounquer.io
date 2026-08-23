@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Server build and tests
 
 on:
   push:
@@ -13,11 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+    - name: Install build dependencies
+      run: sudo apt-get update && sudo apt-get install -y cmake libboost-system-dev
+    - name: Configure
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+    - name: Build
+      run: cmake --build build --parallel
+    - name: Test
+      run: ctest --test-dir build --output-on-failure
+

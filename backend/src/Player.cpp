@@ -18,15 +18,12 @@ void Player::update(float deltaTime) {
         state_.velocity = glm::normalize(state_.velocity) * maxSpeed_;
     }
 
-    // Update position
-    state_.position += state_.velocity * deltaTime;
-    
     // Update last action time
     state_.lastActionTime = deltaTime;
 }
 
 void Player::setVelocity(const glm::vec3& vel) {
-    state_.velocity = vel;
+    state_.velocity = glm::length(vel) > maxSpeed_ ? glm::normalize(vel) * maxSpeed_ : vel;
     state_.isMoving = glm::length(vel) > 0.1f;
 }
 
@@ -82,3 +79,4 @@ bool Player::removeWeapon(WeaponType weapon, uint32_t count) {
     }
     return false;
 }
+

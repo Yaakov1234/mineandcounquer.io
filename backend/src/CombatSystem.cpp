@@ -1,5 +1,4 @@
 #include "CombatSystem.h"
-#include <glm/gtx/distance.hpp>
 #include <map>
 #include <iostream>
 
@@ -101,3 +100,4 @@ void CombatSystem::initializeWeapons() {
     weaponConfigs_[WeaponType::SNIPER] = {60.0f, 300.0f, 1.0f, 300, 1.0f};
     weaponConfigs_[WeaponType::ROCKET_LAUNCHER] = {100.0f, 200.0f, 0.5f, 500, 0.6f};
 }
+

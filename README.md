@@ -39,20 +39,34 @@ mineandcounquer.io/
 
 ### Backend Setup
 ```bash
-cd backend
-mkdir build
-cd build
-cmake ..
-make
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+./build/mine_server 8080
 ```
 
-### Frontend Setup
-```bash
-cd frontend
-npm install
-npm start
+The server accepts WebSocket connections at `ws://localhost:8080`. A browser client is not included yet.
+
+### Minimal protocol
+
+All client messages are JSON objects with a `type` and optional `payload`.
+
+```json
+{ "type": "join", "payload": { "username": "miner" } }
+{ "type": "move", "payload": { "velocity": { "x": 10, "y": 0, "z": 0 } } }
+{ "type": "exit_mine" }
 ```
+
+After joining, the server assigns the player ID itself and returns `joined`. It emits `world_state` snapshots at 20 Hz. Supported actions are `move`, `exit_mine`, `enter_mine`, `buy_weapon`, `place_structure`, `fire_weapon`, and `ping`.
+
+### Requirements
+
+- CMake 3.24 or later
+- A C++17 compiler
+- Boost.System development headers
+
+CMake downloads GLM, nlohmann/json, and websocketpp during configuration.
 
 ## Development
 
-See `docs/ARCHITECTURE.md` for detailed design documentation.
+See `docs/ARCHITECTURE.md` for the intended full game design. The immediate next milestone is the Three.js client that connects to this server.
+
